@@ -26,6 +26,7 @@ import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.style.BasicStyle
 import io.github.proify.lyricon.lyric.style.LogoStyle
 import io.github.proify.lyricon.lyric.style.LyricStyle
+import io.github.proify.lyricon.lyric.style.WidgetStyle
 import io.github.proify.lyricon.lyric.view.LayoutTransitionX
 import io.github.proify.lyricon.lyric.view.LyricPlayerView
 import io.github.proify.lyricon.lyric.view.visibleIfChanged
@@ -48,6 +49,8 @@ class StatusBarLyric(
     val logoView: SuperLogo = SuperLogo(context).apply {
         this.linkedTextView = linkedTextView
     }
+
+    val widgetView: StatusWidgetView = StatusWidgetView(context)
 
     val textView: SuperText = SuperText(context).apply {
         this.linkedTextView = linkedTextView
@@ -197,6 +200,7 @@ class StatusBarLyric(
         currentStyle = style
         logoView.applyStyle(style)
         updateLogoLocation()
+        updateWidget(style)
         textView.applyStyle(style)
         updateLayoutConfig(style)
 
@@ -222,6 +226,7 @@ class StatusBarLyric(
         lastPlaying = playing
         isPlaying = playing
         onPlayingChanged?.invoke(playing)
+        widgetView.setPlaying(playing)
 
         if (!playing) {
             textView.reset()
@@ -241,16 +246,26 @@ class StatusBarLyric(
         currentStyle.basicStyle.hideOnLockScreen && keyguardManager.isKeyguardLocked
 
     fun updateVisibility() {
-        val shouldShow = isPlaying
-                && !isHideOnLockScreen()
+        val widgetStyle = currentStyle.basicStyle.widgetStyle
+        val widgetVisible = widgetStyle.enabled &&
+                widgetStyle.position == WidgetStyle.POSITION_LEFT_OF_ICONS &&
+                (if (widgetStyle.showOnlyWhenPlaying) isPlaying else true)
+
+        val lyricVisible = isPlaying
                 && textView.shouldShow()
                 && !lyricTimedOut
+
+        val shouldShow = (lyricVisible || widgetVisible)
+                && !isHideOnLockScreen()
                 && !isDisabledVisible
 
         visibleIfChanged = shouldShow
 
-        Log.d(TAG, "updateVisibility: $shouldShow")
-        Log.d(TAG, "textVisibility: ${textView.isVisible}")
+        // Ensure lyric components are only visible when they should be
+        logoView.isVisible = lyricVisible
+        textView.isVisible = lyricVisible
+
+        Log.d(TAG, "updateVisibility: $shouldShow (lyric: $lyricVisible, widget: $widgetVisible)")
     }
 
     fun setSong(song: Song?) {
@@ -308,8 +323,23 @@ class StatusBarLyric(
     private fun applyInitialStyle(style: LyricStyle) {
         currentStyle = style
         logoView.applyStyle(style)
+        updateWidget(style)
         textView.applyStyle(style)
         updateLayoutConfig(style)
+    }
+
+    private fun updateWidget(style: LyricStyle) {
+        val widgetStyle = style.basicStyle.widgetStyle
+        widgetView.applyStyle(widgetStyle)
+        if (widgetStyle.enabled && widgetStyle.position == WidgetStyle.POSITION_LEFT_OF_ICONS) {
+            if (!contains(widgetView)) {
+                addView(widgetView)
+            }
+        } else {
+            if (contains(widgetView)) {
+                removeView(widgetView)
+            }
+        }
     }
 
     private fun updateLogoLocation() {

@@ -36,6 +36,8 @@ data class BasicStyle(
     var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH,
 
     var blockedWordsRegexString: String = Defaults.BLOCKED_WORDS_REGEX,
+
+    var widgetStyle: WidgetStyle = WidgetStyle(),
 ) : AbstractStyle(), Parcelable {
 
     @IgnoredOnParcel
@@ -136,6 +138,8 @@ data class BasicStyle(
             Defaults.BLOCKED_WORDS_REGEX
         ) ?: Defaults.BLOCKED_WORDS_REGEX
         blockedWordsRegex = null
+
+        widgetStyle.load(preferences)
     }
 
     override fun onWrite(editor: SharedPreferences.Editor) {
@@ -170,6 +174,8 @@ data class BasicStyle(
         )
         editor.putString("lyric_style_base_timeout_hide_keywords", keywordHideMatches.toJson())
         editor.putString("lyric_style_base_blocked_words_regex", blockedWordsRegexString)
+
+        widgetStyle.write(editor)
     }
 
     object Defaults {

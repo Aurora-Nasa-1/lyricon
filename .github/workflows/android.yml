@@ -1,6 +1,12 @@
 name: Android CI
 
 on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
   workflow_dispatch:
     inputs:
       build_type:
@@ -61,15 +67,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: 确定构建类型
+        id: build_type
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "type=release" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "type=${{ github.event.inputs.build_type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=debug" >> $GITHUB_OUTPUT
+          fi
+
       - name: 解码签名密钥
-        if: github.event.inputs.build_type == 'release'
+        if: steps.build_type.outputs.type == 'release'
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
           echo "密钥已保存到 release.jks"
 
-      - name: 构建 ${{ github.event.inputs.build_type }} APK
+      - name: 构建 ${{ steps.build_type.outputs.type }} APK
         run: |
-          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
+          if [ "${{ steps.build_type.outputs.type }}" == "debug" ]; then
             ./gradlew :lyricon:assembleDebug
           else
             ./gradlew :lyricon:assembleRelease
@@ -83,12 +100,21 @@ jobs:
       - name: 上传 APK 文件
         uses: actions/upload-artifact@v4
         with:
-          name: lyricon-${{ github.event.inputs.build_type }}-apk
-          path: lyricon/build/outputs/apk/${{ github.event.inputs.build_type }}/lyricon-*${{ github.event.inputs.build_type }}.apk
+          name: lyricon-${{ steps.build_type.outputs.type }}-apk
+          path: lyricon/build/outputs/apk/${{ steps.build_type.outputs.type }}/**/lyricon-*${{ steps.build_type.outputs.type }}.apk
           if-no-files-found: warn
 
+      - name: 创建 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: lyricon/build/outputs/apk/release/**/lyricon-*release.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 清理敏感文件
-        if: github.event.inputs.build_type == 'release'
+        if: steps.build_type.outputs.type == 'release'
         run: |
           rm -f release.jks
           echo "已清理敏感文件"
@@ -101,11 +127,22 @@ jobs:
     steps:
       - name: 构建结果摘要
         run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then
+            BUILD_TYPE="release"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          else
+            BUILD_TYPE="debug"
+          fi
           echo "## 构建完成 ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **事件**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **分支/标签**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **构建类型**: ${{ github.event.inputs.build_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建类型**: $BUILD_TYPE" >> $GITHUB_STEP_SUMMARY
           echo "- **构建编号**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "APK 文件已上传到 Artifacts，可在 Actions 页面下载。" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "已自动创建 GitHub Release 并上传发布包。" >> $GITHUB_STEP_SUMMARY
+          fi
