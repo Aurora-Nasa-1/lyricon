@@ -78,12 +78,6 @@ jobs:
             echo "type=debug" >> $GITHUB_OUTPUT
           fi
 
-      - name: 解码签名密钥
-        if: steps.build_type.outputs.type == 'release'
-        run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
-          echo "密钥已保存到 release.jks"
-
       - name: 构建 ${{ steps.build_type.outputs.type }} APK
         run: |
           if [ "${{ steps.build_type.outputs.type }}" == "debug" ]; then
@@ -91,11 +85,6 @@ jobs:
           else
             ./gradlew :lyricon:assembleRelease
           fi
-        env:
-          RELEASE_STORE_FILE: ../release.jks
-          RELEASE_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: 上传 APK 文件
         uses: actions/upload-artifact@v4
@@ -112,12 +101,6 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 清理敏感文件
-        if: steps.build_type.outputs.type == 'release'
-        run: |
-          rm -f release.jks
-          echo "已清理敏感文件"
 
   summary:
     runs-on: ubuntu-latest
