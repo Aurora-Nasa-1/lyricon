@@ -26,6 +26,7 @@ import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.style.BasicStyle
 import io.github.proify.lyricon.lyric.style.LogoStyle
 import io.github.proify.lyricon.lyric.style.LyricStyle
+import io.github.proify.lyricon.lyric.style.WidgetStyle
 import io.github.proify.lyricon.lyric.view.LayoutTransitionX
 import io.github.proify.lyricon.lyric.view.LyricPlayerView
 import io.github.proify.lyricon.lyric.view.visibleIfChanged
@@ -247,7 +248,7 @@ class StatusBarLyric(
     fun updateVisibility() {
         val widgetStyle = currentStyle.basicStyle.widgetStyle
         val widgetVisible = widgetStyle.enabled &&
-                widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_LEFT_OF_ICONS &&
+                widgetStyle.position == WidgetStyle.POSITION_LEFT_OF_ICONS &&
                 (if (widgetStyle.showOnlyWhenPlaying) isPlaying else true)
 
         val lyricVisible = isPlaying
@@ -330,7 +331,7 @@ class StatusBarLyric(
     private fun updateWidget(style: LyricStyle) {
         val widgetStyle = style.basicStyle.widgetStyle
         widgetView.applyStyle(widgetStyle)
-        if (widgetStyle.enabled && widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_LEFT_OF_ICONS) {
+        if (widgetStyle.enabled && widgetStyle.position == WidgetStyle.POSITION_LEFT_OF_ICONS) {
             if (!contains(widgetView)) {
                 addView(widgetView)
             }

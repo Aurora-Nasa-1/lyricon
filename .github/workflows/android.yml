@@ -2,8 +2,11 @@ name: Android CI
 
 on:
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
     inputs:
       build_type:
@@ -69,8 +72,10 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "type=release" >> $GITHUB_OUTPUT
-          else
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "type=${{ github.event.inputs.build_type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=debug" >> $GITHUB_OUTPUT
           fi
 
       - name: 解码签名密钥
@@ -122,9 +127,16 @@ jobs:
     steps:
       - name: 构建结果摘要
         run: |
-          BUILD_TYPE=$(if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then echo "release"; else echo "${{ github.event.inputs.build_type }}"; fi)
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then
+            BUILD_TYPE="release"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          else
+            BUILD_TYPE="debug"
+          fi
           echo "## 构建完成 ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **事件**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **分支/标签**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **构建类型**: $BUILD_TYPE" >> $GITHUB_STEP_SUMMARY
