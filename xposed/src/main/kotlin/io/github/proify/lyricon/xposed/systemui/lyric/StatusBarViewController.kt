@@ -27,6 +27,7 @@ import io.github.proify.lyricon.common.util.ScreenStateMonitor
 import io.github.proify.lyricon.lyric.style.BasicStyle
 import io.github.proify.lyricon.lyric.style.LyricStyle
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric
+import io.github.proify.lyricon.statusbarlyric.StatusWidgetView
 import io.github.proify.lyricon.xposed.systemui.util.ClockColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.OnColorChangeListener
 import io.github.proify.lyricon.xposed.systemui.util.ViewVisibilityController
@@ -44,6 +45,7 @@ class StatusBarViewController(
     val context: Context = statusBarView.context.applicationContext
     val visibilityController = ViewVisibilityController(statusBarView)
     val lyricView: StatusBarLyric by lazy { createLyricView(currentLyricStyle) }
+    private val farRightWidgetView: StatusWidgetView by lazy { StatusWidgetView(context) }
 
     private val clockId: Int by lazy { ResourceMapper.getIdByName(context, "clock") }
     private var lastAnchor = ""
@@ -163,8 +165,38 @@ class StatusBarViewController(
             updateLocation(basicStyle)
         }
         lyricView.updateStyle(lyricStyle)
+        updateFarRightWidget(basicStyle)
 
         systemStatusBarColor?.let { updateStatusColor(it) }
+    }
+
+    private fun updateFarRightWidget(basicStyle: BasicStyle) {
+        val widgetStyle = basicStyle.widgetStyle
+        farRightWidgetView.applyStyle(widgetStyle)
+        farRightWidgetView.setPlaying(LyricViewController.isPlaying)
+
+        if (widgetStyle.enabled && widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_FAR_RIGHT) {
+            if (farRightWidgetView.parent == null) {
+                val lp = ViewGroup.MarginLayoutParams(
+                    widgetStyle.width.dp,
+                    widgetStyle.height.dp
+                )
+                if (lp is android.widget.FrameLayout.LayoutParams) {
+                    lp.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                }
+                statusBarView.addView(farRightWidgetView, lp)
+            } else {
+                val lp = farRightWidgetView.layoutParams
+                lp.width = widgetStyle.width.dp
+                lp.height = widgetStyle.height.dp
+                if (lp is android.widget.FrameLayout.LayoutParams) {
+                    lp.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                }
+                farRightWidgetView.layoutParams = lp
+            }
+        } else {
+            (farRightWidgetView.parent as? ViewGroup)?.removeView(farRightWidgetView)
+        }
     }
 
     fun updateCoverThemeColors(coverFile: File?) {

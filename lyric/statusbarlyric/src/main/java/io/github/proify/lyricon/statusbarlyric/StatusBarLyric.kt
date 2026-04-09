@@ -49,6 +49,8 @@ class StatusBarLyric(
         this.linkedTextView = linkedTextView
     }
 
+    val widgetView: StatusWidgetView = StatusWidgetView(context)
+
     val textView: SuperText = SuperText(context).apply {
         this.linkedTextView = linkedTextView
         eventListener = object : SuperText.EventListener {
@@ -197,6 +199,7 @@ class StatusBarLyric(
         currentStyle = style
         logoView.applyStyle(style)
         updateLogoLocation()
+        updateWidget(style)
         textView.applyStyle(style)
         updateLayoutConfig(style)
 
@@ -222,6 +225,7 @@ class StatusBarLyric(
         lastPlaying = playing
         isPlaying = playing
         onPlayingChanged?.invoke(playing)
+        widgetView.setPlaying(playing)
 
         if (!playing) {
             textView.reset()
@@ -308,8 +312,23 @@ class StatusBarLyric(
     private fun applyInitialStyle(style: LyricStyle) {
         currentStyle = style
         logoView.applyStyle(style)
+        updateWidget(style)
         textView.applyStyle(style)
         updateLayoutConfig(style)
+    }
+
+    private fun updateWidget(style: LyricStyle) {
+        val widgetStyle = style.basicStyle.widgetStyle
+        widgetView.applyStyle(widgetStyle)
+        if (widgetStyle.enabled && widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_LEFT_OF_ICONS) {
+            if (!contains(widgetView)) {
+                addView(widgetView)
+            }
+        } else {
+            if (contains(widgetView)) {
+                removeView(widgetView)
+            }
+        }
     }
 
     private fun updateLogoLocation() {

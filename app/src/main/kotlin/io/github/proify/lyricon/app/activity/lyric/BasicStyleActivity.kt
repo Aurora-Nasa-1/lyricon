@@ -9,6 +9,9 @@ package io.github.proify.lyricon.app.activity.lyric
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -31,14 +35,19 @@ import io.github.proify.lyricon.app.compose.preference.InputPreference
 import io.github.proify.lyricon.app.compose.preference.InputType
 import io.github.proify.lyricon.app.compose.preference.RectInputPreference
 import io.github.proify.lyricon.app.compose.preference.SwitchPreference
+import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
+import io.github.proify.lyricon.app.compose.preference.rememberFloatPreference
+import io.github.proify.lyricon.app.compose.preference.rememberIntPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.app.util.LyricPrefs
 import io.github.proify.lyricon.app.util.Utils
 import io.github.proify.lyricon.app.util.editCommit
 import io.github.proify.lyricon.lyric.style.BasicStyle
+import io.github.proify.lyricon.lyric.style.WidgetStyle
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SpinnerEntry
 import top.yukonga.miuix.kmp.extra.SuperSpinner
+import java.io.File
 
 class BasicLyricStyleActivity : AbstractLyricActivity() {
     private val preferences by lazy { LyricPrefs.basicStylePrefs }
@@ -271,6 +280,10 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                 }
             }
 
+            item(key = "widget") {
+                WidgetSettings()
+            }
+
             item("bottom_spacer") {
                 Spacer(Modifier.height(16.dp))
             }
@@ -339,6 +352,122 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
             isTimeUnit = true,
             formatMultiplier = 1000
         )
+    }
+
+    @Composable
+    private fun WidgetSettings() {
+        val context = LocalContext.current
+        Card(
+            modifier = Modifier
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp)
+                .fillMaxWidth()
+        ) {
+            SwitchPreference(
+                preferences,
+                "lyric_style_widget_enabled",
+                defaultValue = WidgetStyle.Defaults.ENABLED,
+                startAction = { IconActions(painterResource(R.drawable.ic_extension)) },
+                title = stringResource(R.string.item_widget_enabled),
+            )
+
+            SwitchPreference(
+                preferences,
+                "lyric_style_widget_show_only_when_playing",
+                defaultValue = WidgetStyle.Defaults.SHOW_ONLY_WHEN_PLAYING,
+                startAction = { IconActions(painterResource(R.drawable.ic_music_note)) },
+                title = stringResource(R.string.item_widget_show_only_playing),
+            )
+
+            var position by rememberIntPreference(
+                preferences,
+                "lyric_style_widget_position",
+                WidgetStyle.Defaults.POSITION
+            )
+            val positionOptions = listOf(
+                SpinnerEntry(title = stringResource(R.string.option_widget_position_far_right)),
+                SpinnerEntry(title = stringResource(R.string.option_widget_position_left_icons)),
+            )
+            SuperSpinner(
+                startAction = { IconActions(painterResource(R.drawable.ic_locationon)) },
+                title = stringResource(R.string.item_widget_position),
+                items = positionOptions,
+                selectedIndex = if (position == WidgetStyle.POSITION_FAR_RIGHT) 0 else 1,
+                onSelectedIndexChange = {
+                    position = if (it == 0) WidgetStyle.POSITION_FAR_RIGHT else WidgetStyle.POSITION_LEFT_OF_ICONS
+                }
+            )
+
+            var mediaType by rememberIntPreference(
+                preferences,
+                "lyric_style_widget_media_type",
+                WidgetStyle.Defaults.MEDIA_TYPE
+            )
+            val typeOptions = listOf(
+                SpinnerEntry(title = stringResource(R.string.option_widget_type_image)),
+                SpinnerEntry(title = stringResource(R.string.option_widget_type_gif)),
+                SpinnerEntry(title = stringResource(R.string.option_widget_type_video)),
+            )
+            SuperSpinner(
+                startAction = { IconActions(painterResource(R.drawable.masked_transitions_24px)) },
+                title = stringResource(R.string.item_widget_media_type),
+                items = typeOptions,
+                selectedIndex = mediaType,
+                onSelectedIndexChange = { mediaType = it }
+            )
+
+            var mediaPath by rememberStringPreference(
+                preferences,
+                "lyric_style_widget_media_path",
+                WidgetStyle.Defaults.MEDIA_PATH
+            )
+
+            val launcher = rememberLauncherForActivityResult(
+                ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                uri?.let {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val fileName = "widget_media"
+                    val file = File(context.filesDir, fileName)
+                    inputStream?.use { input ->
+                        file.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    // Make it world readable so SystemUI can access it
+                    file.setReadable(true, false)
+                    mediaPath = file.absolutePath
+                }
+            }
+
+            SuperArrow(
+                title = stringResource(R.string.item_widget_media),
+                summary = mediaPath ?: stringResource(R.string.item_translation_api_key_not_set),
+                startAction = { IconActions(painterResource(R.drawable.ic_palette)) },
+                onClick = {
+                    val requestType = when (mediaType) {
+                        WidgetStyle.TYPE_VIDEO -> ActivityResultContracts.PickVisualMedia.VideoOnly
+                        else -> ActivityResultContracts.PickVisualMedia.ImageOnly
+                    }
+                    launcher.launch(PickVisualMediaRequest(requestType))
+                }
+            )
+
+            InputPreference(
+                preferences = preferences,
+                key = "lyric_style_widget_width",
+                title = stringResource(R.string.item_widget_width),
+                inputType = InputType.DOUBLE,
+                startAction = { IconActions(painterResource(R.drawable.ic_width_normal)) },
+            )
+
+            InputPreference(
+                preferences = preferences,
+                key = "lyric_style_widget_height",
+                title = stringResource(R.string.item_widget_height),
+                inputType = InputType.DOUBLE,
+                startAction = { IconActions(painterResource(R.drawable.ic_width_normal)) },
+            )
+        }
     }
 
     @Composable

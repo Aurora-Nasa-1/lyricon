@@ -185,4 +185,19 @@
     <string name="add_color">添加</string>
     <string name="delete_current_color">删除当前颜色</string>
     <string name="item_base_blocked_words_regex">歌词屏蔽正则</string>
+
+    <string name="category_widget">状态栏挂件</string>
+    <string name="item_widget_enabled">启用挂件</string>
+    <string name="item_widget_show_only_playing">仅在播放时显示</string>
+    <string name="item_widget_position">显示位置</string>
+    <string name="option_widget_position_far_right">最右侧</string>
+    <string name="option_widget_position_left_icons">右侧图标左侧</string>
+    <string name="item_widget_media">媒体选择</string>
+    <string name="item_widget_media_path">媒体路径</string>
+    <string name="item_widget_media_type">媒体类型</string>
+    <string name="option_widget_type_image">图片</string>
+    <string name="option_widget_type_gif">动图</string>
+    <string name="option_widget_type_video">视频</string>
+    <string name="item_widget_width">挂件宽度</string>
+    <string name="item_widget_height">挂件高度</string>
 </resources>
