@@ -200,4 +200,5 @@
     <string name="option_widget_type_video">视频</string>
     <string name="item_widget_width">挂件宽度</string>
     <string name="item_widget_height">挂件高度</string>
+    <string name="item_widget_media_not_set">未选择</string>
 </resources>

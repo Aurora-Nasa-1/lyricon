@@ -427,21 +427,19 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                 uri?.let {
                     val inputStream = context.contentResolver.openInputStream(it)
                     val fileName = "widget_media"
-                    val file = File(context.filesDir, fileName)
+                    val file = File(context.getExternalFilesDir(null), fileName)
                     inputStream?.use { input ->
                         file.outputStream().use { output ->
                             input.copyTo(output)
                         }
                     }
-                    // Make it world readable so SystemUI can access it
-                    file.setReadable(true, false)
                     mediaPath = file.absolutePath
                 }
             }
 
             SuperArrow(
                 title = stringResource(R.string.item_widget_media),
-                summary = mediaPath ?: stringResource(R.string.item_translation_api_key_not_set),
+                summary = mediaPath ?: stringResource(R.string.item_widget_media_not_set),
                 startAction = { IconActions(painterResource(R.drawable.ic_palette)) },
                 onClick = {
                     val requestType = when (mediaType) {

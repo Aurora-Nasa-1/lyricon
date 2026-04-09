@@ -177,21 +177,22 @@ class StatusBarViewController(
 
         if (widgetStyle.enabled && widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_FAR_RIGHT) {
             if (farRightWidgetView.parent == null) {
-                val lp = ViewGroup.MarginLayoutParams(
+                val lp = android.widget.FrameLayout.LayoutParams(
                     widgetStyle.width.dp,
                     widgetStyle.height.dp
-                )
-                if (lp is android.widget.FrameLayout.LayoutParams) {
-                    lp.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                ).apply {
+                    gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
                 }
                 statusBarView.addView(farRightWidgetView, lp)
             } else {
-                val lp = farRightWidgetView.layoutParams
+                val lp = farRightWidgetView.layoutParams as? android.widget.FrameLayout.LayoutParams
+                    ?: android.widget.FrameLayout.LayoutParams(
+                        widgetStyle.width.dp,
+                        widgetStyle.height.dp
+                    )
                 lp.width = widgetStyle.width.dp
                 lp.height = widgetStyle.height.dp
-                if (lp is android.widget.FrameLayout.LayoutParams) {
-                    lp.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
-                }
+                lp.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
                 farRightWidgetView.layoutParams = lp
             }
         } else {

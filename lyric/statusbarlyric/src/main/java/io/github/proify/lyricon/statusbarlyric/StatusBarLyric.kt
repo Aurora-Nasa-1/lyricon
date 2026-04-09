@@ -245,16 +245,26 @@ class StatusBarLyric(
         currentStyle.basicStyle.hideOnLockScreen && keyguardManager.isKeyguardLocked
 
     fun updateVisibility() {
-        val shouldShow = isPlaying
-                && !isHideOnLockScreen()
+        val widgetStyle = currentStyle.basicStyle.widgetStyle
+        val widgetVisible = widgetStyle.enabled &&
+                widgetStyle.position == io.github.proify.lyricon.lyric.style.WidgetStyle.POSITION_LEFT_OF_ICONS &&
+                (if (widgetStyle.showOnlyWhenPlaying) isPlaying else true)
+
+        val lyricVisible = isPlaying
                 && textView.shouldShow()
                 && !lyricTimedOut
+
+        val shouldShow = (lyricVisible || widgetVisible)
+                && !isHideOnLockScreen()
                 && !isDisabledVisible
 
         visibleIfChanged = shouldShow
 
-        Log.d(TAG, "updateVisibility: $shouldShow")
-        Log.d(TAG, "textVisibility: ${textView.isVisible}")
+        // Ensure lyric components are only visible when they should be
+        logoView.isVisible = lyricVisible
+        textView.isVisible = lyricVisible
+
+        Log.d(TAG, "updateVisibility: $shouldShow (lyric: $lyricVisible, widget: $widgetVisible)")
     }
 
     fun setSong(song: Song?) {
